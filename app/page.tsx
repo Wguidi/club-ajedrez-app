@@ -5,9 +5,9 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState, FormEvent } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
-// Credenciales directas para evitar fallos de lectura en Vercel
+// Credenciales directas de Supabase
 const SUPABASE_URL = 'https://ghzbphqkbdhbstpefney.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_...'; // PEGÁ ACÁ TU CLAVE ANON_KEY DE SUPABASE COMPLETA
+const SUPABASE_ANON_KEY = 'sb_publishable_...'; // PEGÁ ACÁ TU CLAVE ANON_KEY COMPLETA
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -24,6 +24,11 @@ export default function Home() {
   const [nombre, setNombre] = useState('');
   const [elo, setElo] = useState('1200');
 
+  // Estados para controlar la instalación de la PWA
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState(true);
+
+  // Función de carga declarada en el ámbito principal
   async function fetchSocios() {
     setLoading(true);
     try {
@@ -42,8 +47,44 @@ export default function Home() {
   }
 
   useEffect(() => {
+    // Detectar si la app ya está instalada o abierta en modo standalone
+    const isPWA =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as any).standalone;
+    setIsStandalone(isPWA);
+
+    // Capturar el evento de instalación del navegador
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsStandalone(false);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Cargar socios al iniciar
     fetchSocios();
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
+
+  // Lanzar la ventana emergente de instalación
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsStandalone(true);
+      }
+      setDeferredPrompt(null);
+    } else {
+      alert(
+        'Para instalar en iPhone (Safari): tocá el botón Compartir ⎋ y seleccioná "Agregar a inicio".'
+      );
+    }
+  };
 
   async function handleGuardarSocio(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -67,7 +108,30 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-900 text-white p-8">
+    <main className="min-h-screen bg-slate-900 text-white p-8 relative">
+      {/* PANTALLA DE BLOQUEO DE INSTALACIÓN (PWA) */}
+      {!isStandalone && (
+        <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center">
+          <div className="bg-slate-800 border border-slate-700 p-8 rounded-2xl max-w-md shadow-2xl space-y-6">
+            <span className="text-6xl">♟️</span>
+            <h2 className="text-2xl font-bold text-amber-400">Instalación Requerida</h2>
+            <p className="text-slate-300 text-sm">
+              Para utilizar la aplicación del Club de Ajedrez debés instalarla en la pantalla de inicio de tu celular.
+            </p>
+            <button
+              onClick={handleInstallClick}
+              className="w-full bg-amber-500 hover:bg-amber-600 font-bold text-slate-950 py-3 px-6 rounded-xl transition shadow-lg text-lg"
+            >
+              📲 Instalar Aplicación Ahora
+            </button>
+            <p className="text-xs text-slate-500">
+              Sin la app instalada, la pantalla permanecerá bloqueada.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* CONTENIDO PRINCIPAL */}
       <div className="max-w-4xl mx-auto space-y-8">
         <header className="border-b border-slate-700 pb-4">
           <h1 className="text-3xl font-bold text-amber-400">♟️ Club de Ajedrez</h1>
