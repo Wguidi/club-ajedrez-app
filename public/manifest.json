@@ -1,0 +1,16 @@
+{
+  "name": "Club de Ajedrez",
+  "short_name": "Ajedrez",
+  "description": "Padrón oficial de socios y ranking ELO",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
