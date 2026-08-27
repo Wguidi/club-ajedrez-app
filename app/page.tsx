@@ -1,10 +1,15 @@
 'use client';
 
-// Deshabilita la generación estática durante 'next build'
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState, FormEvent } from 'react';
 import { createClient } from '@supabase/supabase-js';
+
+// Credenciales directas para evitar fallos de lectura en Vercel
+const SUPABASE_URL = 'https://ghzbphqkbdhbstpefney.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_...'; // PEGÁ ACÁ TU CLAVE ANON_KEY DE SUPABASE COMPLETA
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 interface Socio {
   id: string;
@@ -19,33 +24,30 @@ export default function Home() {
   const [nombre, setNombre] = useState('');
   const [elo, setElo] = useState('1200');
 
-  useEffect(() => {
-    // La conexión se realiza ÚNICAMENTE cuando el cliente abre la página en el navegador
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ghzbphqkbdhbstpefney.supabase.co';
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy';
-    const supabase = createClient(url, key);
-
-    async function fetchSocios() {
-      setLoading(true);
-      const { data } = await supabase
+  async function fetchSocios() {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .order('elo', { ascending: false });
 
-      if (data) setSocios(data as Socio[]);
-      setLoading(false);
+      if (!error && data) {
+        setSocios(data as Socio[]);
+      }
+    } catch (err) {
+      console.error(err);
     }
+    setLoading(false);
+  }
 
+  useEffect(() => {
     fetchSocios();
   }, []);
 
   async function handleGuardarSocio(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!nombre) return;
-
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ghzbphqkbdhbstpefney.supabase.co';
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy';
-    const supabase = createClient(url, key);
 
     const { error } = await supabase.from('profiles').insert([
       {
@@ -60,7 +62,7 @@ export default function Home() {
     } else {
       setNombre('');
       setElo('1200');
-      window.location.reload();
+      fetchSocios();
     }
   }
 
