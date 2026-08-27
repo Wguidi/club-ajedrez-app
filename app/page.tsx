@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface Socio {
@@ -15,7 +15,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [nombre, setNombre] = useState('');
   const [elo, setElo] = useState('1200');
-  const [role, setRole] = useState('socio');
+  const [role] = useState('socio');
 
   async function fetchSocios() {
     setLoading(true);
@@ -25,7 +25,7 @@ export default function Home() {
       .order('elo', { ascending: false });
 
     if (!error && data) {
-      setSocios(data);
+      setSocios(data as Socio[]);
     }
     setLoading(false);
   }
@@ -34,14 +34,14 @@ export default function Home() {
     fetchSocios();
   }, []);
 
-  async function handleGuardarSocio(e: React.FormEvent) {
+  async function handleGuardarSocio(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!nombre) return;
 
     const { error } = await supabase.from('profiles').insert([
       {
         full_name: nombre,
-        elo: parseInt(elo),
+        elo: parseInt(elo, 10) || 1200,
         role: role,
       },
     ]);
@@ -51,7 +51,7 @@ export default function Home() {
     } else {
       setNombre('');
       setElo('1200');
-      fetchSocios(); // Recargar lista
+      fetchSocios();
     }
   }
 
@@ -63,7 +63,6 @@ export default function Home() {
           <p className="text-slate-400">Padrón oficial de socios y ranking ELO</p>
         </header>
 
-        {/* Formulario para agregar socio */}
         <section className="bg-slate-800 rounded-lg p-6 shadow-xl">
           <h2 className="text-xl font-semibold mb-4 text-slate-200">Cargar Nuevo Socio</h2>
           <form onSubmit={handleGuardarSocio} className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -92,7 +91,6 @@ export default function Home() {
           </form>
         </section>
 
-        {/* Tabla de Ranking */}
         <section className="bg-slate-800 rounded-lg p-6 shadow-xl">
           <h2 className="text-xl font-semibold mb-4 text-slate-200">Ranking de Jugadores</h2>
 
