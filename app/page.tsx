@@ -1,9 +1,7 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
 import { useEffect, useState, FormEvent } from 'react';
-import { supabase } from '../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
 interface Socio {
   id: string;
@@ -19,15 +17,24 @@ export default function Home() {
   const [elo, setElo] = useState('1200');
   const [role] = useState('socio');
 
+  // Inicialización segura dentro del componente cliente
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ghzbphqkbdhbstpefney.supabase.co';
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
   async function fetchSocios() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('elo', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('elo', { ascending: false });
 
-    if (!error && data) {
-      setSocios(data as Socio[]);
+      if (!error && data) {
+        setSocios(data as Socio[]);
+      }
+    } catch (err) {
+      console.error(err);
     }
     setLoading(false);
   }
