@@ -1,5 +1,8 @@
 'use client';
 
+// Deshabilita la generación estática durante 'next build'
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useState, FormEvent } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
@@ -15,31 +18,24 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [nombre, setNombre] = useState('');
   const [elo, setElo] = useState('1200');
-  const [role] = useState('socio');
 
-  // Inicialización segura dentro del componente cliente
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ghzbphqkbdhbstpefney.supabase.co';
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder';
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  useEffect(() => {
+    // La conexión se realiza ÚNICAMENTE cuando el cliente abre la página en el navegador
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ghzbphqkbdhbstpefney.supabase.co';
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy';
+    const supabase = createClient(url, key);
 
-  async function fetchSocios() {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
+    async function fetchSocios() {
+      setLoading(true);
+      const { data } = await supabase
         .from('profiles')
         .select('*')
         .order('elo', { ascending: false });
 
-      if (!error && data) {
-        setSocios(data as Socio[]);
-      }
-    } catch (err) {
-      console.error(err);
+      if (data) setSocios(data as Socio[]);
+      setLoading(false);
     }
-    setLoading(false);
-  }
 
-  useEffect(() => {
     fetchSocios();
   }, []);
 
@@ -47,20 +43,24 @@ export default function Home() {
     e.preventDefault();
     if (!nombre) return;
 
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ghzbphqkbdhbstpefney.supabase.co';
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy';
+    const supabase = createClient(url, key);
+
     const { error } = await supabase.from('profiles').insert([
       {
         full_name: nombre,
         elo: parseInt(elo, 10) || 1200,
-        role: role,
+        role: 'socio',
       },
     ]);
 
     if (error) {
-      alert('Error al guardar: ' + error.message);
+      alert('Error: ' + error.message);
     } else {
       setNombre('');
       setElo('1200');
-      fetchSocios();
+      window.location.reload();
     }
   }
 
