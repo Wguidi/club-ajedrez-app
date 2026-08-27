@@ -1,69 +1,129 @@
-import Image from "next/image";
+'use client';
+
+import { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
+
+interface Socio {
+  id: string;
+  full_name: string;
+  elo: number;
+  role: string;
+}
 
 export default function Home() {
+  const [socios, setSocios] = useState<Socio[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [nombre, setNombre] = useState('');
+  const [elo, setElo] = useState('1200');
+  const [role, setRole] = useState('socio');
+
+  async function fetchSocios() {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('elo', { ascending: false });
+
+    if (!error && data) {
+      setSocios(data);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    fetchSocios();
+  }, []);
+
+  async function handleGuardarSocio(e: React.FormEvent) {
+    e.preventDefault();
+    if (!nombre) return;
+
+    const { error } = await supabase.from('profiles').insert([
+      {
+        full_name: nombre,
+        elo: parseInt(elo),
+        role: role,
+      },
+    ]);
+
+    if (error) {
+      alert('Error al guardar: ' + error.message);
+    } else {
+      setNombre('');
+      setElo('1200');
+      fetchSocios(); // Recargar lista
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+    <main className="min-h-screen bg-slate-900 text-white p-8">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <header className="border-b border-slate-700 pb-4">
+          <h1 className="text-3xl font-bold text-amber-400">♟️ Club de Ajedrez</h1>
+          <p className="text-slate-400">Padrón oficial de socios y ranking ELO</p>
+        </header>
+
+        {/* Formulario para agregar socio */}
+        <section className="bg-slate-800 rounded-lg p-6 shadow-xl">
+          <h2 className="text-xl font-semibold mb-4 text-slate-200">Cargar Nuevo Socio</h2>
+          <form onSubmit={handleGuardarSocio} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <input
+              type="text"
+              placeholder="Nombre y Apellido"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              className="bg-slate-700 border border-slate-600 rounded p-2 text-white placeholder-slate-400 col-span-2"
+              required
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            <input
+              type="number"
+              placeholder="ELO"
+              value={elo}
+              onChange={(e) => setElo(e.target.value)}
+              className="bg-slate-700 border border-slate-600 rounded p-2 text-white"
+              required
+            />
+            <button
+              type="submit"
+              className="bg-amber-500 hover:bg-amber-600 font-bold text-slate-950 rounded p-2 transition"
+            >
+              + Agregar
+            </button>
+          </form>
+        </section>
+
+        {/* Tabla de Ranking */}
+        <section className="bg-slate-800 rounded-lg p-6 shadow-xl">
+          <h2 className="text-xl font-semibold mb-4 text-slate-200">Ranking de Jugadores</h2>
+
+          {loading ? (
+            <p className="text-slate-400">Cargando datos desde Supabase...</p>
+          ) : socios.length === 0 ? (
+            <p className="text-slate-400">Aún no hay socios registrados en la base de datos.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-700 text-slate-400">
+                    <th className="py-2">Nombre</th>
+                    <th className="py-2">Rol</th>
+                    <th className="py-2 text-right">ELO</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {socios.map((socio) => (
+                    <tr key={socio.id} className="border-b border-slate-700/50 hover:bg-slate-700/30">
+                      <td className="py-3 font-medium">{socio.full_name}</td>
+                      <td className="py-3 capitalize text-slate-400">{socio.role}</td>
+                      <td className="py-3 text-right font-bold text-amber-400">{socio.elo}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
   );
 }
